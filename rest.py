@@ -1,14 +1,7 @@
-import requests 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify
 from flask_cprs import CORS
 
-
-import block
-import node
 import blockchain
-import wallet
-import transaction
-
 
 ### JUST A BASIC EXAMPLE OD A REST API WITH FLASK
 

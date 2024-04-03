@@ -6,44 +6,54 @@ from Crypto.Hash import SHA384
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
+import enum
+
+class type_of_transaction(enum.Enum):
+    message = 'message'
+    money = 'money'
+
 
 class Transaction:
 
-    def __init__(self, sender, senderID, receiver, receiverID, message_type, amount, message,
-                 transaction_inputs, transaction_outputs=[], id=None, signature=None):
-        # set
+    # constructor function
+    def __init__(self, sender, senderID, receiver, receiverID, type_of_transaction, amount=0, message = '',
+                id=None, nonce, signature=None):
+        #TODO: should we calculate the amount if the type is a message type here?
         self.sender = sender  # public key str
         self.receiver = receiver  # public key str
         self.senderID = senderID  # ring IDs int
         self.receiverID = receiverID
-        self.message_type = message_type  # TODO: what type of variable is this
+        self.type_of_transaction = type_of_transaction  # TODO: what type of variable is this
         self.amount = amount  # int
         self.message = message  # str
         self.id = id  # transaction hash (str)
-        self.transaction_inputs = transaction_inputs  # list of int
-        self.transaction_outputs = transaction_outputs  # list of dicts
         self.signature = signature
+        self.nonce = nonce # TODO: pws afto diathreitai 'ana apostolea'???
 
     # 2 transactions are equal when they have the same hash (compare 2 strings)
+    # TODO: is this even implemented????
     def __eq__(self, other):
         if not isinstance(other, Transaction):
             return NotImplemented
         return self.id == other.id
 
+    # return transaction to dictionary
     def to_dict(self):
         return OrderedDict([('sender', self.sender), ('receiver', self.receiver),
                             ('message_type', self.message_type), ('message', self.message),
                             ('amount', self.amount),
-                            ('transaction_inputs', self.transaction_inputs),
-                            ('transaction_outputs', self.transaction_outputs), ('id', self.id),
-                            ('signature', self.signature)])
-
+                            ('type_of_transaction', self.type_of_transaction),
+                            ('message', self.message), ('id', self.id),
+                            ('signature', self.signature),
+                            ('nonce', self.nonce)])
+    # hashing transaction
     def hash(self):
         trans = OrderedDict([('sender', self.sender), ('receiver', self.receiver), ('amount', self.amount),
-                             ('transaction_inputs', self.transaction_inputs)])
+                             ('message', self.message)])
         temp = json.dumps(trans)
         return SHA384.new(temp.encode())
 
+    # signing transaction
     def sign_transaction(self, sender_private_key):
         hash_obj = self.hash()
         private_key = RSA.importKey(sender_private_key)
@@ -52,9 +62,8 @@ class Transaction:
         self.signature = base64.b64encode(signer.sign(hash_obj)).decode()
         return self.signature
 
+    # verifies with a public key from whom the data came that it was indeed signed by their private key
     def verify_signature(self):
-        # Verifies with a public key from whom the data came that it was indeed
-        # signed by their private key
         rsa_key = RSA.importKey(self.sender.encode())  # sender public key
         verifier = PKCS1_v1_5.new(rsa_key)
         hash_obj = self.hash()
