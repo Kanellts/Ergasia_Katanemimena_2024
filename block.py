@@ -15,6 +15,10 @@ class Block:
         self.listOfTransactions = []
         self.hash = None
 
+    # for when mining the block
+    def block_validator(self,validator):
+        self.validator=validator
+
     # returns a list of all the transactions this block has
     def listToSerialisable(self):
         final = []
