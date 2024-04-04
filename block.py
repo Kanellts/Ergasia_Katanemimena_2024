@@ -1,23 +1,23 @@
-import blockchain
 import datetime
-from collections import OrderedDict
-from Crypto.Hash import SHA256
 import json
+from collections import OrderedDict
+
+from Crypto.Hash import SHA256
 
 
 class Block:
     # constructor function of the block
     def __init__(self, index=-1, previousHash=None):
-        self.index = index
-        self.previousHash = previousHash
-        self.timestamp = datetime.datetime.now().timestamp()
+        self.index = index  # block index
+        self.previousHash = previousHash  # hash of the previous block
+        self.timestamp = datetime.datetime.now().timestamp()  # block's creations timestamp
         self.validator = 0  # this should be the public key of the validator / Proof of stake
-        self.listOfTransactions = []
-        self.hash = None
+        self.listOfTransactions = []  # the blocks transactions
+        self.hash = None  # the block's hash
 
     # for when mining the block
-    def block_validator(self,validator):
-        self.validator=validator
+    def block_validator(self, validator):
+        self.validator = validator
 
     # returns a list of all the transactions this block has
     def listToSerialisable(self):
@@ -44,13 +44,12 @@ class Block:
         print('transactions: \t')
         for t in self.listOfTransactions:
             print('\t\tsender id: ' + str(t.senderID) + ' \t\treceiver id: ' + str(
-                t.receiverID) + ' \t\tamount: ' + str(t.amount))
+                t.receiverID) + ' \t\tamount: ' + str(t.amount) + ' \t\tmessage: ' + str(t.message))
             print('\t\thash: ' + str(t.id))
         print('hash: \t\t' + str(self.hash))
 
     '''
 		def add_transaction(transaction transaction, blockchain blockchain):
 	'''
-# TODO: add a transaction to the block
-# TODO: λειπει μια συνάρτηση get που καλείται από το rest.py
-# 		και θα μας δείχνει όλο το ιστορικό των transactions που έχουν γίνει
+# TODO: add a transaction to the block function
+# TODO: returns list of all the transactions that have happened to a blockchain function

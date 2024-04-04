@@ -8,6 +8,7 @@ from Crypto.Signature import PKCS1_v1_5
 
 import enum
 
+
 class type_of_transaction(enum.Enum):
     message = 'message'
     money = 'money'
@@ -16,22 +17,19 @@ class type_of_transaction(enum.Enum):
 class Transaction:
 
     # constructor function
-    def __init__(self, sender, senderID, receiver, receiverID, type_of_transaction, amount=0, message = '',
-                id=None, nonce, signature=None):
-        #TODO: should we calculate the amount if the type is a message type here?
-        self.sender = sender  # public key str
-        self.receiver = receiver  # public key str
-        self.senderID = senderID  # ring IDs int
-        self.receiverID = receiverID
-        self.type_of_transaction = type_of_transaction  # TODO: what type of variable is this
-        self.amount = amount  # int
-        self.message = message  # str
+    def __init__(self, sender, senderID, receiver, receiverID, type_of_transaction, amount=0, message='',
+                 id=None, signature=None):
+        self.sender = sender  # public key str of the sender
+        self.receiver = receiver  # public key str of the receiver
+        self.senderID = senderID  # ring IDs int of the sender
+        self.receiverID = receiverID  # ring IDs int of the receiver
+        self.type_of_transaction = type_of_transaction  # enum of either money or message
+        self.amount = amount  # int of the amount if it's a money transaction
+        self.message = message  # str of the message if it's a message transaction
         self.id = id  # transaction hash (str)
-        self.signature = signature
-        self.nonce = nonce # TODO: pws afto diathreitai 'ana apostolea'???
+        self.signature = signature  # transaction signature
 
     # 2 transactions are equal when they have the same hash (compare 2 strings)
-    # TODO: is this even implemented????
     def __eq__(self, other):
         if not isinstance(other, Transaction):
             return NotImplemented
@@ -40,12 +38,11 @@ class Transaction:
     # return transaction to dictionary
     def to_dict(self):
         return OrderedDict([('sender', self.sender), ('receiver', self.receiver),
-                            ('message_type', self.message_type), ('message', self.message),
                             ('amount', self.amount),
                             ('type_of_transaction', self.type_of_transaction),
                             ('message', self.message), ('id', self.id),
-                            ('signature', self.signature),
-                            ('nonce', self.nonce)])
+                            ('signature', self.signature)])
+
     # hashing transaction
     def hash(self):
         trans = OrderedDict([('sender', self.sender), ('receiver', self.receiver), ('amount', self.amount),

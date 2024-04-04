@@ -21,7 +21,7 @@ class Blockchain:
         for b in self.block_list:
             b.print_block()
 
-    # add block to chain
+    # adds block to chain
     def add_block(self, new_block):
         # print("add_block")
         self.block_list.append(new_block)
