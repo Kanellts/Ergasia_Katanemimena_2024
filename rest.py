@@ -20,7 +20,7 @@ TOTAL_NODES = 0
 NODE_COUNTER = 0
 
 btsrp_url = 'http://192.168.0.1:' + PORT  # communication details for bootstrap node
-myNode = node.Node()
+myNode = node.node()
 btstrp_IP = '192.168.0.1'
 
 
@@ -110,7 +110,7 @@ def receive_node_request():
             NODE_COUNTER += 1
             newID = NODE_COUNTER
             myNode.register_node_to_ring(newID, str(receivedMsg.get('ip')), receivedMsg.get('port'),
-                                         receivedMsg.get('public_key'))  ##TODO: add the balance
+                                         str(receivedMsg.get('public_key')))  ##TODO: add the balance
             new_data = {}
             new_data['id'] = str(newID)
             new_data['wallets'] = myNode.wallet.wallets
@@ -137,7 +137,7 @@ def receive_node_request():
     if (receivedMsg.get('flag') == 1):
         receiverID = myNode.public_key_to_ring_id(receivedMsg.get('public_key'))
         myNode.create_transaction(myNode.wallet.public_key, myNode.id, receivedMsg.get('public_key'), receiverID,
-                                  100)  # give 100 NBCs to each node
+                                  "money", 1000, '')  # give 1000 BCCs to each node
         return "Transfered 1000 BCCs to Node\n", 200  # OK
 
 
@@ -160,7 +160,7 @@ def receive_trans():
             myNode.unreceived_trans = [t for t in myNode.unreceived_trans if t.id == unrec.id]
             return  # ignore received transaction
 
-    code = myNode.validate_transaction(myNode.wallet.utxos, trans)
+    code = myNode.validate_transaction(myNode.wallet.wallets, trans)
 
     if (code == 'validated'):
         # print('VIVA LA TRANSACTION VALIDA %s to %s!' %(data.get('senderID'), data.get('receiverID')))
@@ -222,17 +222,20 @@ def get_chain_length():
 # create new transaction
 @app.route('/transaction/new', methods=['POST'])
 def transaction_new():
+    # print("FLAG1!!!!!!!!!!!!!!!!!!")
     data = request.get_json()
-    amount = int(data.get('amount'))
+    # print("FLAG1.3!!!!!!!!!!!!!!!!!")
     id = int(data.get('id'))
     transaction_message = str(data.get('message'))
-    transaction_type = bool(data.get('type_of_transaction'))
-    type_of_transaction = transaction.type_of_transaction('message')
-    if transaction_type:
-        type_of_transaction = transaction.type_of_transaction('money')
+    amount = int(data.get('amount'))
+    # print("FLAG1.5!!!!!!!!!!!!!!!!!!")
+    if transaction_message == '':
+        type_of_transaction = 'money'
+    else:
+        type_of_transaction = 'message'
     # print('*** SHE IS LIKE A RAINBOW ***')
-    ip = myNode.ring[id].get('ip')
-    port = myNode.ring[id].get('port')
+    # ip = myNode.ring[id].get('ip')
+    # port = myNode.ring[id].get('port')
     recipient_address = myNode.ring[id].get('public_key')
     senderID = myNode.id
     receiverID = myNode.public_key_to_ring_id(recipient_address)
@@ -259,7 +262,7 @@ def show_balance():
 
 
 @app.route('/show_stake', methods=['GET'])
-def show_balance():
+def show_stake():
     stake = myNode.wallet.return_stake_amount()
     response = {'Stake': stake}
     return json.dumps(response) + "\n", 200

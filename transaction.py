@@ -9,11 +9,6 @@ from Crypto.Signature import PKCS1_v1_5
 import enum
 
 
-class type_of_transaction(enum.Enum):
-    message = 'message'
-    money = 'money'
-
-
 class Transaction:
 
     # constructor function
@@ -23,7 +18,7 @@ class Transaction:
         self.receiver = receiver  # public key str of the receiver
         self.senderID = senderID  # ring IDs int of the sender
         self.receiverID = receiverID  # ring IDs int of the receiver
-        self.type_of_transaction = type_of_transaction  # enum of either money or message
+        self.type_of_transaction = type_of_transaction  # str of either money or message
         self.amount = amount  # int of the amount if it's a money transaction
         self.message = message  # str of the message if it's a message transaction
         self.id = id  # transaction hash (str)

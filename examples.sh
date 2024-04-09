@@ -15,7 +15,7 @@ expl=('initialize network with bootstrap node'
 
 use=('use: ./examples.sh init <PORT> <number of nodes>'
 	'use: ./examples.sh connect <IP> <PORT>'
-	'use ./examples.sh new_transaction <PORT> <ID> <amount>'
+	'use ./examples.sh new_transaction <PORT> <ID> <amount> <message>'
 	'use ./examples.sh view_transactions <PORT>'
 	'use ./examples.sh balance <PORT>')
 
@@ -37,7 +37,12 @@ case $function in
 		port=$2
 		id=$3
 		amount=$4
-		data="{\"id\":\"$id\",\"amount\":$amount}"
+		message=$5
+		#data="{\"id\":\"$id\",\"message\":\"$message\",\"amount\":\"$amount\}"
+		#data="{\"id\":\"$id\",\"message\":\"$message\",\"amount\":\"$amount\"}"
+		#data="{\"id\":\"$id\",\"message\":\"$message\",\"amount\":$amount}"
+		data="{\"id\":\"$id\",\"message\":\"$message\",\"amount\":\"$amount\"}"
+		echo "$data"
 		# use ./examples.sh new_transaction <PORT> <ID> <amount>
 		curl -d $data -H "Content-Type: application/json" -X POST http://localhost:$port/transaction/new
 		;;

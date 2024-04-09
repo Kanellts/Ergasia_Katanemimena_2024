@@ -108,7 +108,7 @@ class node:
         if self.id == 0:
             self.ring[nodeID] = {'ip': ip, 'port': port, 'public_key': public_key}
             if (self.id != nodeID):
-                self.wallet.wallets[public_key] = []  # initialize wallets of other nodes
+                self.wallet.wallets[public_key] = {}  # initialize wallets of other nodes
         else:
             print("failed to register")
         return
@@ -128,7 +128,7 @@ class node:
 
         # create genesis transaction
         data['receiver'] = data['sender'] = sender
-        data['type_of_transaction'] = transaction.type_of_transaction('money')
+        data['type_of_transaction'] = 'money'
         data['id'] = 0
         data['signature'] = None
         data['amount'] = amount
@@ -138,103 +138,109 @@ class node:
 
         # add genesis UTXO to wallet
         init_wallet = {}
-        init_wallet[sender] = [{"stake": 0, "usable_amount": amount, 'nonce': 0}]
+        init_wallet[sender] = {"stake": 0, "usable_amount": amount, 'nonce': 0}
         self.wallet.wallets = init_wallet  # bootstrap wallet with 1000*n BCCs
         return trans
 
     # creates a transaction
     def create_transaction(self, sender_public, senderID, receiver_public, receiverID, type_of_transaction,
                            amount, message):
+        print("FLAG2!!!!!!!!!!!!!!!!!")
         global trans_time_start
         if not trans_time_start:
             trans_time_start = time.gmtime(time.time())
 
-        try:
-            if type_of_transaction == transaction.type_of_transaction('money'):
-                if self.wallet.balance() < amount:
-                    raise Exception("Not enough money!")
-            elif type_of_transaction == transaction.type_of_transaction('message'):
-                message_cost = len(message)
-                if self.wallet.balance() < message_cost:
-                    raise Exception("Not enough money!")
-            else:
-                raise Exception("Invalid Transaction Type")
-            trxn = copy.deepcopy(
-                transaction.Transaction(sender_public, senderID, receiver_public, receiverID,
-                                        type_of_transaction, amount, message))
-            trxn.sign_transaction(self.wallet.private_key)  # set id & signature
+        #try:
+        if type_of_transaction == 'money':
+            if self.wallet.balance() < amount:
+                print("TO STANIO MOU!!!!")
+                raise Exception("Not enough money!")
+        elif type_of_transaction == 'message':
+            message_cost = len(message)
+            if self.wallet.balance() < message_cost:
+                print("correctif")
+                print(self.wallet.balance())
+                raise Exception("Not enough money!")
+        else:
+            raise Exception("Invalid Transaction Type")
+        trxn = copy.deepcopy(
+            transaction.Transaction(sender_public, senderID, receiver_public, receiverID,
+                                    type_of_transaction, amount, message))
+        trxn.sign_transaction(self.wallet.private_key)  # set id & signature
 
-            if (self.validate_transaction(self.wallet.wallets,
-                                          trxn) == 'validated'):  # Node validates the trxn it created
-                self.add_transaction_to_validated(trxn)
-                self.broadcast_transaction(trxn)
-                return "Created new transaction!"
-            else:
-                return "Transaction not created,error"
+        if (self.validate_transaction(self.wallet.wallets,
+                                      trxn) == 'validated'):  # Node validates the trxn it created
+            self.add_transaction_to_validated(trxn)
+            self.broadcast_transaction(trxn)
+            return "Created new transaction!"
+        else:
+            return "Transaction not created,error"
 
-        except Exception as e:
-            print(f"create_transaction: {e.__class__.__name__}: {e}")
-            return "Not enough money!"
+        # except Exception as e:
+        #     print(f"create_transaction: {e.__class__.__name__}: {e}")
+        #     return "Not enough money!last"
 
     # does not change lists of validated or pending transactions, only returns code
     def validate_transaction(self, wallets, t):
         # print("validate_transaction")
-        try:
-            # verify signature
-            if not t.verify_signature():
-                raise Exception('invalid signature')
-            if t.sender == t.receiver:
-                raise Exception('sender must be different from recepient')
-            if t.amount <= 0 and t.type_of_transaction == transaction.type_of_transaction('money'):
-                raise Exception('Negative amount of money in money transaction!')
-            if t.message == '' and t.type_of_transaction == transaction.type_of_transaction('message'):
-                raise Exception('Empty message in message transaction!')
+        #try:
+        # verify signature
+        if not t.verify_signature():
+            raise Exception('invalid signature')
+        if t.sender == t.receiver:
+            raise Exception('sender must be different from recepient')
+        if t.amount <= 0 and t.type_of_transaction == 'money':
+            raise Exception('Negative amount of money in money transaction!')
+        if t.message == '' and t.type_of_transaction == 'message':
+            raise Exception('Empty message in message transaction!')
 
-            sender_wallet = copy.deepcopy(wallets[t.sender])
-            receiver_wallet = copy.deepcopy(wallets[t.receiver])
-            if t.type_of_transaction == transaction.type_of_transaction('money'):
-                sender_wallet["usable_amount"] -= t.amount * 1.03  # charging the sender
-                sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
-                receiver_wallet["usable_amount"] += t.amount  # giving money to the receiver
-            else:
-                sender_wallet["usable_amount"] -= len(t.message)  # charging the sender
-                sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
+        # sender_wallet = copy.deepcopy(wallets[t.sender])
+        # receiver_wallet = copy.deepcopy(wallets[t.receiver])
+        sender_wallet = copy.deepcopy(wallets[t.sender])
+        receiver_wallet = copy.deepcopy(wallets[t.receiver])
+        if t.type_of_transaction == 'money':
+            sender_wallet["usable_amount"] -= t.amount * 1.03  # charging the sender
+            sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
+            receiver_wallet["usable_amount"] += t.amount  # giving money to the receiver
+        else:
+            sender_wallet["usable_amount"] -= len(t.message)  # charging the sender
+            sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
 
-            # # sender_utxos = copy.deepcopy(wallet_utxos[t.sender])
-            # for t_id in t.transaction_inputs:
-            # 	found = False
-            # 	for utxo in sender_utxos:
-            # 		if utxo['id'] == t_id and utxo['to_who'] == t.sender:
-            # 			found = True
-            # 			val_amount += utxo['amount']
-            # 			sender_utxos.remove(utxo)
-            # 			break
-            # 	if not found:
-            # 		# raise Exception('missing transaction inputs')
-            # 		return 'pending'
-            # temp = []
-            # if (val_amount >= t.amount):
-            # 	temp.append({'id': t.id, 'to_who': t.sender, 'amount': val_amount - t.amount})
-            # 	temp.append({'id': t.id, 'to_who': t.receiver, 'amount': t.amount})
-            #
-            # if (temp != t.transaction_outputs):
-            # 	raise Exception('Wrong outputs')
-            # if (
-            # 		t.receiver not in wallet_utxos.keys()):  # no transaction has been made with receiver, initialize his wallet
-            # 	wallet_utxos[t.receiver] = []
-            # if (len(t.transaction_outputs) == 2):
-            # 	sender_utxos.append(t.transaction_outputs[0])  # removed old utxos , added
-            # 	wallet_utxos[t.sender] = sender_utxos
-            # 	wallet_utxos[t.receiver].append(t.transaction_outputs[1])
-            # else:
-            # 	wallet_utxos[t.sender] = sender_utxos
-            # 	wallet_utxos[t.receiver].append(t.transaction_outputs[0])
+        # # sender_utxos = copy.deepcopy(wallet_utxos[t.sender])
+        # for t_id in t.transaction_inputs:
+        # 	found = False
+        # 	for utxo in sender_utxos:
+        # 		if utxo['id'] == t_id and utxo['to_who'] == t.sender:
+        # 			found = True
+        # 			val_amount += utxo['amount']
+        # 			sender_utxos.remove(utxo)
+        # 			break
+        # 	if not found:
+        # 		# raise Exception('missing transaction inputs')
+        # 		return 'pending'
+        # temp = []
+        # if (val_amount >= t.amount):
+        # 	temp.append({'id': t.id, 'to_who': t.sender, 'amount': val_amount - t.amount})
+        # 	temp.append({'id': t.id, 'to_who': t.receiver, 'amount': t.amount})
+        #
+        # if (temp != t.transaction_outputs):
+        # 	raise Exception('Wrong outputs')
+        # if (
+        # 		t.receiver not in wallet_utxos.keys()):  # no transaction has been made with receiver, initialize his wallet
+        # 	wallet_utxos[t.receiver] = []
+        # if (len(t.transaction_outputs) == 2):
+        # 	sender_utxos.append(t.transaction_outputs[0])  # removed old utxos , added
+        # 	wallet_utxos[t.sender] = sender_utxos
+        # 	wallet_utxos[t.receiver].append(t.transaction_outputs[1])
+        # else:
+        # 	wallet_utxos[t.sender] = sender_utxos
+        # 	wallet_utxos[t.receiver].append(t.transaction_outputs[0])
 
-            return 'validated'
+        return 'validated'
 
-        except Exception as e:
-            print(f"validate transaction: {e.__class__.__name__}: {e}")
-            return 'error'
+        # except Exception as e:
+        #     print(f"validate transaction: {e.__class__.__name__}: {e}")
+        #     return 'error'
 
     # check if any of the pending transactions can be validated
     # if it can be validated, remove it from pending and added to validated

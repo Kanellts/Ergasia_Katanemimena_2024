@@ -9,6 +9,9 @@ then
 else
 	case $func in
 		run)
+		  sudo apt install python3-pip
+		  pip install numpy
+		  pip install pycryptodome
 			pip install termcolor
 			pip install flask_cors
 			export FLASK_APP=rest.py

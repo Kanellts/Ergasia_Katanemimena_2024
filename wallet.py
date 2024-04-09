@@ -13,8 +13,8 @@ class Wallet:
 
     # return this wallet's balance/usable_amount
     def balance(self):
-        temp = self.wallets[self.public_key]
-        return temp['usable_amount']
+        temp = self.wallets[self.public_key]['usable_amount']
+        return temp
 
     # changes the stake of a node
     def stake(self, stake):

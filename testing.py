@@ -19,6 +19,9 @@ if __name__ == '__main__':
 
     for line, i in zip(lines[start:], np.arange(start, end + 1, 1)):
         print(f'executing line {line}')
-        id, amount = line.split()
+        amount = 0
+        listofarguments = line.split(' ', 1)
+        id = listofarguments[0]
+        message = listofarguments[1]
         id = id[-1]
-        os.system(f'./examples.sh new_transaction {port} {id} {amount}')
+        os.system(f'./examples.sh new_transaction {port} {id} {amount} {message}')
