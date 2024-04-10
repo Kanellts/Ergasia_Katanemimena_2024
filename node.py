@@ -108,7 +108,10 @@ class node:
         if self.id == 0:
             self.ring[nodeID] = {'ip': ip, 'port': port, 'public_key': public_key}
             if (self.id != nodeID):
-                self.wallet.wallets[public_key] = {}  # initialize wallets of other nodes
+                # self.wallet.wallets[public_key] = []  # initialize wallets of other nodes
+                # wallet = {"usable_amount": 0, "stake": 0, "nonce": 0}
+                self.wallet.wallets[public_key] = {}
+                print(self.wallet.wallets)
         else:
             print("failed to register")
         return
@@ -136,16 +139,16 @@ class node:
         data['receiverID'] = 0
         trans = transaction.Transaction(**data)  # genesis transaction
 
-        # add genesis UTXO to wallet
+        # add genesis money to wallet
         init_wallet = {}
-        init_wallet[sender] = {"stake": 0, "usable_amount": amount, 'nonce': 0}
+        init_wallet[self.wallet.public_key] = {"stake": 0, "usable_amount": amount, "nonce": 0}
         self.wallet.wallets = init_wallet  # bootstrap wallet with 1000*n BCCs
         return trans
 
     # creates a transaction
     def create_transaction(self, sender_public, senderID, receiver_public, receiverID, type_of_transaction,
                            amount, message):
-        print("FLAG2!!!!!!!!!!!!!!!!!")
+        # print("FLAG2!!!!!!!!!!!!!!!!!")
         global trans_time_start
         if not trans_time_start:
             trans_time_start = time.gmtime(time.time())
@@ -153,12 +156,12 @@ class node:
         #try:
         if type_of_transaction == 'money':
             if self.wallet.balance() < amount:
-                print("TO STANIO MOU!!!!")
+                # print("TO STANIO MOU!!!!")
                 raise Exception("Not enough money!")
         elif type_of_transaction == 'message':
             message_cost = len(message)
             if self.wallet.balance() < message_cost:
-                print("correctif")
+                # print("correctif")
                 print(self.wallet.balance())
                 raise Exception("Not enough money!")
         else:
@@ -196,16 +199,23 @@ class node:
 
         # sender_wallet = copy.deepcopy(wallets[t.sender])
         # receiver_wallet = copy.deepcopy(wallets[t.receiver])
-        sender_wallet = copy.deepcopy(wallets[t.sender])
-        receiver_wallet = copy.deepcopy(wallets[t.receiver])
+        if t.receiver not in wallets:  # no transaction has been made with receiver, initialize his wallet
+            wallets[t.receiver] = {}
+        if wallets[t.receiver] == {}:
+            print("flagggg")
+            wallets[t.receiver] = {"usable_amount": 0, "stake": 0, "nonce": 0}
         if t.type_of_transaction == 'money':
-            sender_wallet["usable_amount"] -= t.amount * 1.03  # charging the sender
-            sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
-            receiver_wallet["usable_amount"] += t.amount  # giving money to the receiver
+            wallets[t.sender]["usable_amount"] -= t.amount * 1.03  # charging the sender
+            wallets[t.sender]["nonce"] += 1  # increasing the nonce counter by 1
+            wallets[t.receiver]["usable_amount"] += t.amount  # giving money to the receiver
+            print( wallets[t.receiver]["usable_amount"])
         else:
-            sender_wallet["usable_amount"] -= len(t.message)  # charging the sender
-            sender_wallet["nonce"] += 1  # increasing the nonce counter by 1
-
+            wallets[t.sender]["usable_amount"] -= len(t.message)  # charging the sender
+            wallets[t.sender]["nonce"] += 1  # increasing the nonce counter by 1
+        print("SENDER")
+        print(wallets[t.sender])
+        print("RECEIVER")
+        print(wallets[t.receiver])
         # # sender_utxos = copy.deepcopy(wallet_utxos[t.sender])
         # for t_id in t.transaction_inputs:
         # 	found = False
@@ -439,7 +449,7 @@ class node:
         # REDO bootstrap's utxos which are not validated
         btstrp_public_k = self.ring[0]['public_key']
         amount = len(self.ring.keys()) * 1000  # number of nodes * 100 BCCs
-        tmp_wallets[btstrp_public_k] = [{"stake": 0, "usable_amount": amount, "nonce": 0}]
+        tmp_wallets = {btstrp_public_k: {"stake": 0, "usable_amount": amount, "nonce": 0}}
 
         self.add_block_list_to_chain(chain, blocklist)
 
