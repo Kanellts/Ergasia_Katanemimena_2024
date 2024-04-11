@@ -20,6 +20,9 @@ class Block:
     def block_validator(self, validator):
         self.validator = validator
 
+    def return_validator(self):
+        return self.validator
+
     # returns a list of all the transactions this block has
     def listToSerialisable(self):
         final = []
@@ -31,7 +34,6 @@ class Block:
     def myHash(self):
         hash_data = OrderedDict(
             [('index', self.index), ('prev', self.previousHash), ('tmsp', self.timestamp),
-             ('validator', self.validator),
              ('transactions', self.listToSerialisable())])
         tmp = json.dumps(hash_data)
         return SHA256.new(tmp.encode()).hexdigest()

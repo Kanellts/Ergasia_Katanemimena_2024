@@ -267,6 +267,15 @@ def show_stake():
     response = {'Stake': stake}
     return json.dumps(response) + "\n", 200
 
+@app.route('/update_stake', methods=['POST'])
+def update_stake():
+    data = request.get_json()
+    stake = int(data.get('amount'))
+    test = myNode.wallet.stake(stake)
+    if test == 0:
+        return "Stake updated!" "\n", 200
+    else:
+        return "Stake not updated! Check how many money the node has!"
 
 @app.route('/blockchain/view', methods=['GET'])
 def view_blockchain():
@@ -277,6 +286,7 @@ def view_blockchain():
 @app.route('/transactions/view', methods=['GET'])
 def view_transactions():
     last_transactions = myNode.valid_chain.block_list[-1].listOfTransactions
+    validator = myNode.valid_chain.block_list[-1].return_validator()
     response = {}
     for t, i in zip(last_transactions, np.arange(len(last_transactions))):
         print(t)
@@ -293,6 +303,7 @@ def view_transactions():
         tmp['type_of_transaction'] = t.type_of_transaction
         tmp['message'] = t.message
         tmp['amount'] = t.amount
+        tmp['validator'] = validator
         response[str(i)] = tmp
     return json.dumps(response) + "\n", 200
 

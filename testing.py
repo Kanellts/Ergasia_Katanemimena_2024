@@ -22,6 +22,6 @@ if __name__ == '__main__':
         amount = 0
         listofarguments = line.split(' ', 1)
         id = listofarguments[0]
-        message = listofarguments[1]
+        message = listofarguments[-1]
         id = id[-1]
         os.system(f'./examples.sh new_transaction {port} {id} {amount} {message}')
