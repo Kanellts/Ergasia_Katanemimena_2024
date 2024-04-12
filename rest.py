@@ -1,5 +1,6 @@
 import copy
 import json
+import time
 
 import numpy as np
 import requests
@@ -171,9 +172,9 @@ def receive_trans():
         myNode.validate_pending()
 
         if (isBlockMined):
-            return print_n_return('Valid transaction added to block, mining block OK\n', 200)
+            return print_n_return('Valid transaction added!\n', 200)
         else:
-            return print_n_return('Valid transaction added to block OK\n', 200)
+            return print_n_return('Valid transaction added!\n', 200)
 
     elif (code == 'pending'):
         myNode.add_transaction_to_pending(trans)
@@ -312,9 +313,12 @@ def view_transactions():
 def trans_time():
     start, end = myNode.trans_timer()
     response = {}
-    response['start'] = f'{start[3]}:{start[4]}:{start[5]}:{start[6]}:{start[7]}:{start[8]}'
-    response['end'] = f'{end[3]}:{end[4]}:{end[5]}:{end[6]}:{end[7]}:{end[8]}'
+    response['start'] = f'{start[3]}:{start[4]}:{start[5]}'
+    response['end'] = f'{end[3]}:{end[4]}:{end[5]}'
+    time_diff_seconds = time.mktime(end) - time.mktime(start)
+    time_diff_miliseconds = time_diff_seconds * 1000
     response['# transactions'] = myNode.numBlocks()
+    response[' milliseconds elapsed'] = time_diff_miliseconds
     return json.dumps(response), 200
 
 

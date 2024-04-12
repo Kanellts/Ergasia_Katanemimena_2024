@@ -12,22 +12,19 @@ import blockchain
 import transaction
 import wallet
 
-CAPACITY = 10  # run capacity = 1, 5, 10
+CAPACITY = 5  # run capacity = 1, 5, 10
 init_count = -1
 
 trans_time_start = None
 trans_time_end = None
 block_time = 0
 
-lock = threading.Lock()
-
 
 class node:
     def __init__(self, NUM_OF_NODES=None):
-        # self.BCC = 1000
         self.wallet = wallet.Wallet()  # node's wallet
         self.id = -1  # bootstrap node will send the node's final ID
-        self.valid_chain = blockchain.Blockchain()
+        self.valid_chain = blockchain.Blockchain() #node's blockchain
         self.ring = {}  # store info for every node (id, address (ip:port), public key, balance)
         self.pool = threadpool.Threadpool()  # node's pool of threads (use for mining, broadcast, etc)
         self.valid_trans = []  # list of validated transactions collected to create a new block
@@ -35,6 +32,7 @@ class node:
         self.unreceived_trans = []  # list of transactions that are known because of a received block, they are not received individually
         self.old_valid = []  # to keep a copy of validated transactions in case miner empties them while mining
         self.validator_money = 0
+        #TODO: do we need pending_trans or unreceived trans?
 
     # returns the url of this node
     def toURL(self, nodeID):
@@ -46,7 +44,7 @@ class node:
         global trans_time_end, trans_time_start
         return trans_time_start, trans_time_end
 
-    # ?????? idk what it does
+    # returns the time of block
     def block_timer(self):
         global block_time
         return block_time / len(self.valid_chain.block_list)
@@ -55,7 +53,7 @@ class node:
     def numBlocks(self):
         return CAPACITY * len(self.valid_chain.block_list)
 
-    # ???? idk what it does
+    # broadcasts
     def broadcast(self, message, url):
         m = json.dumps(message)
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
@@ -72,7 +70,7 @@ class node:
         self.broadcast(message, url)
         return
 
-    # broadcasted the block
+    # broadcasts the block
     def broadcast_block(self, block):
         url = "receive_block"
         message = copy.deepcopy(block.__dict__)
@@ -100,14 +98,11 @@ class node:
             valid_chain_list.append(newBlock)
         return
 
-    # add this node to the ring, only the bootstrap node can add a node to the ring after checking its wallet and ip:port address
-    # bootstrap node informs all other nodes and gives the request node an id and 1000 BCCs
+    # add this node to the ring (only the bootstrap node can add a node to the ring)
     def register_node_to_ring(self, nodeID, ip, port, public_key):
         if self.id == 0:
             self.ring[nodeID] = {'ip': ip, 'port': port, 'public_key': public_key}
-            if (self.id != nodeID):
-                # self.wallet.wallets[public_key] = []  # initialize wallets of other nodes
-                # wallet = {"usable_amount": 0, "stake": 0, "nonce": 0}
+            if self.id != nodeID:
                 self.wallet.wallets[public_key] = {}
                 print(self.wallet.wallets)
         else:
@@ -150,7 +145,6 @@ class node:
         if not trans_time_start:
             trans_time_start = time.gmtime(time.time())
 
-        # try:
         if amount != 0 and message != '':
             raise Exception("Choose either money-transaction or message transaction!")
         if type_of_transaction == 'money':
@@ -176,14 +170,8 @@ class node:
         else:
             return "Transaction not created,error"
 
-        # except Exception as e:
-        #     print(f"create_transaction: {e.__class__.__name__}: {e}")
-        #     return "Not enough money!last"
-
     # does not change lists of validated or pending transactions, only returns code
     def validate_transaction(self, wallets, t):
-        # print("validate_transaction")
-        # try:
         # verify signature
         if not t.verify_signature():
             raise Exception('invalid signature')
@@ -193,13 +181,10 @@ class node:
             raise Exception('Negative amount of money in money transaction!')
         if t.message == '' and t.type_of_transaction == 'message':
             raise Exception('Empty message in message transaction!')
-        # print("FLAG333333333333333333333333333333333333333333333333333333333333333333333333333333333")
-        # sender_wallet = copy.deepcopy(wallets[t.sender])
-        # receiver_wallet = copy.deepcopy(wallets[t.receiver])
+
         if t.receiver not in wallets:  # no transaction has been made with receiver, initialize his wallet
             wallets[t.receiver] = {}
         if wallets[t.receiver] == {}:
-            # print("flagggg")
             wallets[t.receiver] = {"usable_amount": 0, "stake": 10, "nonce": 0}
         if t.type_of_transaction == 'money':
             self.validator_money += t.amount * 0.03
@@ -211,12 +196,7 @@ class node:
             self.validator_money += len(t.message)
             wallets[t.sender]["usable_amount"] -= len(t.message)  # charging the sender
             wallets[t.sender]["nonce"] += 1  # increasing the nonce counter by 1
-        # print("FLAG444444444444444444444444444444444444444444444444444444444444444444444444")
         return 'validated'
-
-        # except Exception as e:
-        #     print(f"validate transaction: {e.__class__.__name__}: {e}")
-        #     return 'error'
 
     # check if any of the pending transactions can be validated
     # if it can be validated, remove it from pending and added to validated
@@ -231,7 +211,7 @@ class node:
     def add_transaction_to_pending(self, t):
         self.pending_trans.append(t)
 
-    # idk what it does????
+    # TODO: what does this do
     def remove_from_old_valid(self, to_remove):
         tmp = [trans for trans in self.old_valid if trans not in to_remove]
         self.old_valid = tmp
@@ -248,7 +228,6 @@ class node:
             tmp = copy.deepcopy(self.valid_trans)
             self.valid_trans = []
             future = self.pool.submit_task(self.init_mining, tmp, copy.deepcopy(self.wallet.wallets))
-            # future.result()
             return True
         else:
             return False
@@ -319,9 +298,7 @@ class node:
 
     # [THREAD]
     def mine_block(self, block):
-        # print("GOT INTO MININGGGGGGGGGGGGGGGGGGGGGGGGG")
         list_of_validators = self.wallet.wallets
-        # print("done with first for")
         temp_sum = 0
         # αθροίζει το συνολικό ποσό που δώσανε όλοι οι ενδιαφερόμενοι για το validation (σύνολο χρημάτων λοταρίας)
         for key, value in list_of_validators.items():
@@ -329,14 +306,13 @@ class node:
             # print(temp_sum)
 
         # με το seed εξασφαλίζουμε ότι όλα τα vms θα βρούν το ίδιο αποτέλεσμα στη λοτταρία (το seed είναι οποιοδήποτε νούμερο)
-        random.seed(42)
-        # print("after 42")
+        random.seed(44)
+        # print("after 44")
         # ο "λαχνός" που νίκησε τη λοτταρία
         winning_lot = random.randrange(temp_sum)
         # το αμέσως προηγούμενο άνω φράγμα του προηγούμενου συμμετέχοντα στη λοτταρία
         previous_bound = 0
         lucky_winner = -1
-        # print("MININGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
         for key, value in list_of_validators.items():
             # αυξάνει το άνω φράγμα προσθέτοντας στο προηγούμενο το άνω φράγμα του επόμενου validator.
             # έτσι ελέγχουμε αν ο λαχνός που επιλέχθηκε είναι ένας από τους λαχνούς του τρέχοντος validator.
@@ -345,7 +321,7 @@ class node:
             # print("Previous bound = " + str(previous_bound))
             if winning_lot < previous_bound:  # γίνεται ο έλεγχος
                 lucky_winner = key
-                print("VALIDATOR KEY:" + lucky_winner)
+                # print("VALIDATOR KEY:" + lucky_winner)
                 break
         if (lucky_winner == -1):
             return False  # block did not get validated
@@ -367,24 +343,19 @@ class node:
     # [THREAD] create block and call mine
     def init_mining(self, valid_trans, current_wallets):
 
-        global lock, trans_time_end, block_time
+        global trans_time_end, block_time
 
         newBlock = self.create_new_block(valid_trans)
         tmp_wallets = copy.deepcopy(self.wallet.wallet_snapshot)
 
-        # TODO: maybe uncomment this
         # temp = self.block_REDO(newBlock, tmp_wallets)
         # print(temp)
         # if not temp:
         #     # print("Stopping mining, block already added")
         #     return
 
-        # print("i will")
         self.mine_block(newBlock)
-        # print("lose my mind")
 
-        # lock.acquire()
-        # ----- LOCK ----------
         if newBlock.return_validator() == self.wallet.public_key:  # if node is the validator
             if self.validate_block(newBlock):
                 self.valid_chain.add_block(newBlock)
@@ -393,22 +364,18 @@ class node:
                 self.wallet.wallet_snapshot = tmp_wallets
                 self.wallet.wallets[newBlock.return_validator()]["usable_amount"] += self.validator_money
                 self.validator_money = 0
-                # ----- UNLOCK --------
-                # lock.release()
                 block_time += time.thread_time()
                 self.broadcast_block(newBlock)
                 print("validator")
             else:
-                # lock.release()
                 print("not validator")
 
     # redo all the transactions in a block
+    # TODO: do we even use that ?
     def block_REDO(self, block, wallets):
         for trans in block.listOfTransactions:
-            print("FLAG1111111111111111111111111111111111111111111111111111111111111111111111111")
             if (self.validate_transaction(wallets, trans) != 'validated'):
                 print("Failed Transaction: ")
-                print("FLAG2222222222222222222222222222222222222222222222222222222222222222222222")
                 print('\t\tsender id: ' + str(trans.senderID) + ' \t\treceiver id: ' + str(
                     trans.receiverID) + ' \t\ttype_of_transaction: ' + str(trans.type_of_transaction)
                       + ' \t\tamount: ' + str(trans.amount) + ' \t\tmessage: ' + str(trans.message))

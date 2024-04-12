@@ -36,22 +36,6 @@ else
 				curl http://localhost:$port/connect/$ip/$port
 			fi
 			;;
-		# testing)
-		# 	if [ "$#" -ne 4 ]
-		# 	then
-		# 		echo "$(tput setaf 6)Usage: ./setup.sh testing $(tput bold)PORT num_of_nodes ID $(tput sgr0)"
-		# 	else
-		# 		num_of_nodes=$3
-		# 		id=$4
-		# 		file="transactions$id.txt"
-		# 		input="transactions/${num_nodes}nodes/$file"
-		# 		while IFS= read -r line
-		# 		do
-		# 			echo $line
-		# 			sender_id=cut -d" " 1 $line
-		# 			amount=cut -d" " 2 $line
-		# 		done < $input
-		# ;;
 		*)
 	esac
 fi

@@ -20,6 +20,7 @@ class Block:
     def block_validator(self, validator):
         self.validator = validator
 
+    # returns the key of the validator node of the block
     def return_validator(self):
         return self.validator
 
@@ -51,8 +52,3 @@ class Block:
             print('\t\thash: ' + str(t.id))
         print('hash: \t\t' + str(self.hash))
 
-    '''
-		def add_transaction(transaction transaction, blockchain blockchain):
-	'''
-# TODO: add a transaction to the block function
-# TODO: returns list of all the transactions that have happened to a blockchain function

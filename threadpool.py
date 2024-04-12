@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
 
-# pool of threads (use for mining, broadcast, etc)
+# pool of threads
 class Threadpool:
 
     def __init__(self, NUM_OF_THREADS=1):
