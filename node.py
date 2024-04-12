@@ -12,7 +12,7 @@ import blockchain
 import transaction
 import wallet
 
-CAPACITY = 5  # run capacity = 1, 5, 10
+CAPACITY = 5  # run capacity =  5, 10, 20
 init_count = -1
 
 trans_time_start = None
@@ -22,9 +22,10 @@ block_time = 0
 
 class node:
     def __init__(self, NUM_OF_NODES=None):
+        self.number_of_nodes = NUM_OF_NODES
         self.wallet = wallet.Wallet()  # node's wallet
         self.id = -1  # bootstrap node will send the node's final ID
-        self.valid_chain = blockchain.Blockchain() #node's blockchain
+        self.valid_chain = blockchain.Blockchain()  # node's blockchain
         self.ring = {}  # store info for every node (id, address (ip:port), public key, balance)
         self.pool = threadpool.Threadpool()  # node's pool of threads (use for mining, broadcast, etc)
         self.valid_trans = []  # list of validated transactions collected to create a new block
@@ -32,7 +33,7 @@ class node:
         self.unreceived_trans = []  # list of transactions that are known because of a received block, they are not received individually
         self.old_valid = []  # to keep a copy of validated transactions in case miner empties them while mining
         self.validator_money = 0
-        #TODO: do we need pending_trans or unreceived trans?
+        self.mine_counter = 10
 
     # returns the url of this node
     def toURL(self, nodeID):
@@ -120,7 +121,7 @@ class node:
     def create_genesis_transaction(self, num_of_nodes):
         data = {}
         sender = self.wallet.public_key
-        amount = 1030 * (num_of_nodes - 1) + 1000
+        amount = 1000 * num_of_nodes
 
         # create genesis transaction
         data['receiver'] = data['sender'] = sender
@@ -211,7 +212,6 @@ class node:
     def add_transaction_to_pending(self, t):
         self.pending_trans.append(t)
 
-    # TODO: what does this do
     def remove_from_old_valid(self, to_remove):
         tmp = [trans for trans in self.old_valid if trans not in to_remove]
         self.old_valid = tmp
@@ -234,12 +234,6 @@ class node:
 
     def receive_block(self, block):
         global lock, trans_time_end
-        # tmp_wallet = copy.deepcopy(self.wallet.wallet_snapshot)
-
-        # if we have to redo all the transactions in a block
-        # if self.block_REDO(block, tmp_wallet):
-        # if block.return_validator() == self.wallet.public_key:  # if node is the validator
-        # lock.acquire()
         if self.validate_block(block):
             self.valid_chain.add_block(block)
 
@@ -249,38 +243,9 @@ class node:
             self.wallet.wallet_snapshot = copy.deepcopy(self.wallet.wallets)
             self.wallet.wallets[block.return_validator()]["usable_amount"] += self.validator_money
             self.validator_money = 0
-            # self.wallet.wallets = copy.deepcopy(tmp_wallet)
-            # lock.release()
-            #
-            # # UPDATE LISTS
-            # # delete from my pending what was in block
-            # new_pending = [trans for trans in self.pending_trans if trans not in block.listOfTransactions]
-            # self.pending_trans = new_pending
-            #
-            # # add to my unreceived
-            # new_unreceived = [trans for trans in block.listOfTransactions if
-            #                   trans not in (self.old_valid and self.pending_trans)]
-            # for t in new_unreceived:
-            #     self.unreceived_trans.append(t)
-            #
-            # # update validated trans
-            # new_valid = [trans for trans in self.old_valid if trans not in block.listOfTransactions]
-            # self.valid_trans = []
-            #
-            # self.remove_from_old_valid(block.listOfTransactions)
-            #
-            # for t in new_valid:
-            #     self.add_transaction_to_validated(t)
-            # # check if new block is useful for validation of pending transactions
-            # self.validate_pending()
-            # TODO: our implementation doesnt include a resolve conflict function so this whole thing might be completely redundant
-            # else:
-            #     lock.release()
-            #     self.resolve_conflict()
-        #     print("validator")
-        # else:
-        #     print("not validator")
-        #     # self.resolve_conflict()
+            # self.mine_counter +=2
+            # print(self.mine_counter)
+
 
     # [THREAD] initialize a new_block
     def create_new_block(self, valid_trans):
@@ -305,9 +270,9 @@ class node:
             temp_sum = temp_sum + value["stake"]
             # print(temp_sum)
 
-        # με το seed εξασφαλίζουμε ότι όλα τα vms θα βρούν το ίδιο αποτέλεσμα στη λοτταρία (το seed είναι οποιοδήποτε νούμερο)
-        random.seed(44)
-        # print("after 44")
+        # με το seed εξασφαλίζουμε ότι όλα τα vms θα βρούν το ίδιο αποτέλεσμα στη λοτταρία
+        # random.seed(len(self.valid_chain.block_list)
+        random.seed(42)
         # ο "λαχνός" που νίκησε τη λοτταρία
         winning_lot = random.randrange(temp_sum)
         # το αμέσως προηγούμενο άνω φράγμα του προηγούμενου συμμετέχοντα στη λοτταρία
@@ -348,12 +313,6 @@ class node:
         newBlock = self.create_new_block(valid_trans)
         tmp_wallets = copy.deepcopy(self.wallet.wallet_snapshot)
 
-        # temp = self.block_REDO(newBlock, tmp_wallets)
-        # print(temp)
-        # if not temp:
-        #     # print("Stopping mining, block already added")
-        #     return
-
         self.mine_block(newBlock)
 
         if newBlock.return_validator() == self.wallet.public_key:  # if node is the validator
@@ -365,13 +324,14 @@ class node:
                 self.wallet.wallets[newBlock.return_validator()]["usable_amount"] += self.validator_money
                 self.validator_money = 0
                 block_time += time.thread_time()
+                # self.mine_counter+=2
+                # print(self.mine_counter)
                 self.broadcast_block(newBlock)
                 print("validator")
             else:
                 print("not validator")
 
     # redo all the transactions in a block
-    # TODO: do we even use that ?
     def block_REDO(self, block, wallets):
         for trans in block.listOfTransactions:
             if (self.validate_transaction(wallets, trans) != 'validated'):
@@ -394,18 +354,17 @@ class node:
 
     # validates and returns list of block objects
     def validate_chain(self, blocklist):
-        # print("__________I CAN STILL HEAR YOU SAYING__________")
 
         chain = []
         # initialize pending and unreceived transactions
-        pending = copy.deepcopy(self.pending_trans)  # we will use these lists just for validation and
+        pending = copy.deepcopy(self.pending_trans)
         valid = copy.deepcopy(self.valid_trans)
         pending += valid
-        unreceived = copy.deepcopy(self.unreceived_trans)  # then we will add them to node's lists
+        unreceived = copy.deepcopy(self.unreceived_trans)
         tmp_wallets = {}
 
         btstrp_public_k = self.ring[0]['public_key']
-        amount = (len(self.ring.keys()) - 1) * 1030 + 1000  # number of nodes * 100 BCCs
+        amount = len(self.ring.keys()) * 1000  # number of nodes * 100 BCCs
         tmp_wallets = {btstrp_public_k: {"stake": 10, "usable_amount": amount, "nonce": 0}}
 
         self.add_block_list_to_chain(chain, blocklist)
@@ -458,4 +417,3 @@ class node:
         self.valid_trans = []
 
         return True, chain, tmp_wallets
-

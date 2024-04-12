@@ -26,7 +26,6 @@ class Wallet:
             temp['stake'] = stake
             temp['usable_amount'] = temp_sum - stake
             return 0
-    #TODO: make a function to actually change the stake and broadcast it
 
     # returns the stake of a node
     def return_stake_amount(self):

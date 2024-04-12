@@ -25,29 +25,21 @@ myNode = node.node()
 btstrp_IP = '192.168.0.1'
 
 
-#..............................................................................................
-
-# bootstrap node initializes the app
-# create genesis block and add boostrap to dict to be broadcasted
-# OK
+# bootstrap node initializes the app, create genesis block and add boostrap to dict to be broadcasted
 @app.route('/init/<total_nodes>', methods=['GET'])
 def init_connection(total_nodes):
     global TOTAL_NODES
     global PORT
     TOTAL_NODES = int(total_nodes)
-    # print("__________MR BLUE SKY PLEASE TELL US WHY YOU HAD TO HIDE AWAY FOR SO LONG__________")
     print('App starting for ' + str(TOTAL_NODES) + ' nodes')
     genesis_trans = myNode.create_genesis_transaction(TOTAL_NODES)
     myNode.valid_chain.create_blockchain(genesis_trans)  # also creates genesis block
     myNode.id = 0
     myNode.register_node_to_ring(myNode.id, btstrp_IP, PORT, myNode.wallet.public_key)
-    # print('Bootstrap node created: ID = ' + str(myNode.id) + ', blockchain with ' + str(len(myNode.valid_chain.block_list)) + ' block')
-
     return "Init OK\n", 200
 
 
 # node requests to boostrap connect to the ring
-# OK
 @app.route('/connect/<myIP>/<port>', methods=['GET'])
 def connect_node_request(myIP, port):
     # print('Node wants to connect')
@@ -61,9 +53,6 @@ def connect_node_request(myIP, port):
     data = response.json()  # dictionary containing id + chain
     error = 'error' in data.keys()
     if (not error):
-        # print('____CONNECTED____')
-        # print('HEY YOU WITH THE PRETTY FACE')
-        # print('\t\t\tWELCOME TO THE HUMAN RACE')
         potentialID = int(data.get('id'))
         current_chain = data.get('chain')
         current_wallets = data.get('wallets')
@@ -95,7 +84,6 @@ def get_ring():
 
 
 # bootstrap handles node requests to join the ring
-# OK
 @app.route('/receive', methods=['POST'])
 def receive_node_request():
     global NODE_COUNTER
@@ -105,13 +93,12 @@ def receive_node_request():
         senderInfo = 'http://' + receivedMsg.get('ip') + ':' + receivedMsg.get('port')
         print(senderInfo)
         newID = -1
-        # print("total:%d, counter:%d\n"%(TOTAL_NODES,NODE_COUNTER))
 
         if NODE_COUNTER < TOTAL_NODES - 1:
             NODE_COUNTER += 1
             newID = NODE_COUNTER
             myNode.register_node_to_ring(newID, str(receivedMsg.get('ip')), receivedMsg.get('port'),
-                                         str(receivedMsg.get('public_key')))  ##TODO: add the balance
+                                         str(receivedMsg.get('public_key')))
             new_data = {}
             new_data['id'] = str(newID)
             new_data['wallets'] = myNode.wallet.wallets
@@ -138,7 +125,7 @@ def receive_node_request():
     if (receivedMsg.get('flag') == 1):
         receiverID = myNode.public_key_to_ring_id(receivedMsg.get('public_key'))
         myNode.create_transaction(myNode.wallet.public_key, myNode.id, receivedMsg.get('public_key'), receiverID,
-                                  "money", 1000, '')  # give 1000 BCCs to each node
+                                  "money", 1000, '')
         return "Transfered 1000 BCCs to Node\n", 200  # OK
 
 
@@ -147,28 +134,22 @@ def print_n_return(msg, code):
     return msg, code
 
 
-@app.route('/receive_trans', methods=['POST'])  # TODO: remember to check the fields again
+@app.route('/receive_trans', methods=['POST'])
 def receive_trans():
-    # print("***node received a transaction")
     data = request.get_json()
     trans = transaction.Transaction(**data)
 
     # check if transaction is already received & remove it from unreceived
     for unrec in myNode.unreceived_trans:
         if (trans.id == unrec.id):
-            # print("_ALREADY CONFIRMED THIS TRANSACTION_")
-            # print("\t\tI GOT YOU BABE")
             myNode.unreceived_trans = [t for t in myNode.unreceived_trans if t.id == unrec.id]
             return  # ignore received transaction
 
     code = myNode.validate_transaction(myNode.wallet.wallets, trans)
 
     if (code == 'validated'):
-        # print('VIVA LA TRANSACTION VALIDA %s to %s!' %(data.get('senderID'), data.get('receiverID')))
         isBlockMined = myNode.add_transaction_to_validated(trans)
-        # myNode.add_transaction_to_rollback(trans)
 
-        # check if with updated utxos, pending transactions can be validated
         myNode.validate_pending()
 
         if (isBlockMined):
@@ -186,7 +167,6 @@ def receive_trans():
 
 @app.route('/receive_block', methods=['POST'])
 def receive_block():
-    # print('***node ' + str(myNode.id) + ' received a block')
     data = request.get_json()
     b = block.Block(index=int(data.get('index')), previousHash=data.get('previousHash'))
     b.timestamp = data.get('timestamp')
@@ -204,7 +184,6 @@ def receive_block():
 def get_blockchain():
     message = {}
     blocks = []
-    # print("__SENDING CHAIN CHAIN CHAIIIN:__")
     for block in myNode.valid_chain.block_list:
         tmp = copy.deepcopy(block.__dict__)
         tmp['listOfTransactions'] = block.listToSerialisable()
@@ -234,7 +213,6 @@ def transaction_new():
         type_of_transaction = 'money'
     else:
         type_of_transaction = 'message'
-    # print('*** SHE IS LIKE A RAINBOW ***')
     # ip = myNode.ring[id].get('ip')
     # port = myNode.ring[id].get('port')
     recipient_address = myNode.ring[id].get('public_key')
@@ -339,5 +317,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
     app.run(host='0.0.0.0', port=port)
-# close thread pool once app terminated
-# https://stackoverflow.com/questions/49992329/the-workers-in-threadpoolexecutor-is-not-really-daemon
